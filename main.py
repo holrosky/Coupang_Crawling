@@ -50,22 +50,6 @@ def is_there_order():
 
     return True
 
-def get_pcode(item_name):
-    driver.refresh()
-    wait_until_clickable(20, "//div[@class='all-product-modal-btn-wrapper js-view-product-list-btn']")
-    click("//div[@class='all-product-modal-btn-wrapper js-view-product-list-btn']")
-    wait_until_clickable(20, "//a[@id='product-list-modal-reset-button']")
-    click("//a[@id='product-list-modal-reset-button']")
-    wait_until_clickable(20, "//a[@id='product-list-modal-reset-button']")
-    send_key("//input[@id='product-list-modal-travel-name']", item_name + Keys.ENTER)
-    wait_until_clickable(20, "//button[@class='btn-s-ty03 product-list-modal-select-button']")
-    click("//button[@class='btn-s-ty03 product-list-modal-select-button']")
-    wait_until_clickable(20, "//button[@class='btn btn-st05 js-search-button']")
-
-    print(driver.find_element_by_xpath("//div[@class='product-id-wrapper']").text)
-    return ''
-
-
 def parse_order_data():
     while len(driver.window_handles) < 2:
         time.sleep(0.5)
@@ -74,17 +58,17 @@ def parse_order_data():
 
     driver.switch_to.window(driver.window_handles[-1])
 
-    # try:
-    #     wait_until_clickable(2, "//button[@class='btn-s-ty02 js-use-ticket']")
-    # except Exception as e:
-    #     return result
+    try:
+        wait_until_clickable(2, "//button[@class='btn-s-ty02 js-use-ticket']")
+    except Exception as e:
+        return result
 
     cnt = len(driver.find_elements_by_xpath("//table[@class='cancle-table sub-table']"))
-    print(cnt)
 
     for i in range(cnt):
         temp_dict = dict()
-
+        pcode_text = driver.find_elements_by_class_name('cancle-table')[-1].text.split(': ')
+        temp_dict['pcode'] = pcode_text[-1]
         temp_dict['pname'] = driver.find_elements_by_xpath("//span[@class='tit-detail']")[0].text
         temp_dict['ordernum'] = driver.find_elements_by_xpath("//td[@class='tit-sub']")[5].text
         temp_dict['orderdate'] = ''
@@ -103,8 +87,6 @@ def parse_order_data():
 
     driver.close()
     driver.switch_to.window(driver.window_handles[0])
-
-    #pcode = get_pcode(temp_dict['item_name'])
 
     for each in result:
         each['orderdate'] = driver.find_elements_by_class_name('reservation-bold-font')[10].text
@@ -178,79 +160,44 @@ if __name__ == "__main__":
     wait_until_clickable(20, "//input[@id='username']")
     time.sleep(1)
 
+    while True:
+        if is_logged_out():
+            log_in()
 
-    if is_logged_out():
-        log_in()
+        if is_there_order():
+            click("//button[@class='btn-s-ty02 display-b m0-auto js-detail']")
 
-    time.sleep(5)
-    click("//button[@class='btn-s-ty02 display-b m0-auto js-detail']")
+            parse_data = {'secretkey': secrete_key, 'item': list()}
 
-    parse_data = {'secretkey': secrete_key, 'item': list()}
+            for each in parse_order_data():
+                parse_data['item'].append(each)
 
-    for each in parse_order_data():
-        parse_data['item'].append(each)
+            if len(parse_data['item']) != 0:
+                driver.find_elements_by_name('selectVoucherOrder')[1].click()
+                click("//button[@class='btn btn-st01  green js-use-ticket-list']")
+                wait_until_clickable(20, "//button[@class='btn btn btn-st01 green']")
+                click("//button[@class='btn btn btn-st01 green']")
 
-    print(parse_data)
+                digest = hmac.new(encrypt_key.encode('utf-8'), str(parse_data).encode('utf-8'), hashlib.sha256).digest()
+                digest_b64 = base64.b64encode(digest)  # bytes again
+                Hmac = auth_key + ':' + digest_b64.decode('utf-8')
 
-    with open('result.json', 'w', encoding="UTF8") as f:
-        json.dump(parse_data, f, ensure_ascii=False, indent=4)
+                header = {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                    'Authorization': auth_key,
+                    'Hmac': Hmac
+                }
 
-    digest = hmac.new(encrypt_key.encode('utf-8'), str(parse_data).encode('utf-8'), hashlib.sha256).digest()
-    digest_b64 = base64.b64encode(digest)  # bytes again
-    Hmac = auth_key + ':' + digest_b64.decode('utf-8')
+                post_result = requests.post(url=post_api_url, headers=header, data=json.dumps(parse_data))
 
-    header = {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-        'Authorization': auth_key,
-        'Hmac': Hmac
-    }
+                print(Hmac)
+                print(post_result.json())
 
-    post_result = requests.post(url=post_api_url, headers=header)
+            else:
+                driver.close()
+                driver.switch_to.window(driver.window_handles[0])
 
-    print(Hmac)
-    print(post_result)
-
-    # while True:
-    #     if is_logged_out():
-    #         log_in()
-    #
-    #     if is_there_order():
-    #         click("//button[@class='btn-s-ty02 display-b m0-auto js-detail']")
-    #
-    #         parse_data = {'item': list()}
-    #
-    #         for each in parse_order_data():
-    #             parse_data['item'].append(each)
-    #
-    #         if len(parse_data['item']) != 0:
-    #             driver.find_elements_by_name('selectVoucherOrder')[1].click()
-    #             click("//button[@class='btn btn-st01  green js-use-ticket-list']")
-    #             wait_until_clickable(20, "//button[@class='btn btn btn-st01 green']")
-    #             click("//button[@class='btn btn btn-st01 green']")
-    #
-    #             # send post request here...
-    #
-    #             digest = hmac.new(encrypt_key.encode('utf-8'), str(parse_data).encode('utf-8'), hashlib.sha256).digest()
-    #             digest_b64 = base64.b64encode(digest)  # bytes again
-    #             Hmac = auth_key + ':' + digest_b64.decode('utf-8')
-    #
-    #             header = {
-    #                 'Accept': 'application/json',
-    #                 'Content-Type': 'application/json',
-    #                 'Authorization': auth_key,
-    #                 'Hmac': Hmac
-    #             }
-    #
-    #             post_result = requests.post(url=post_api_url, headers=header)
-    #
-    #             print(Hmac)
-    #             print(post_result)
-    #
-    #         else:
-    #             driver.close()
-    #             driver.switch_to.window(driver.window_handles[0])
-    #
-    #     else:
-    #         time.sleep(5)
+        else:
+            time.sleep(3)
 
