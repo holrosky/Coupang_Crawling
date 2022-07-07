@@ -18,7 +18,7 @@ def send_key(xpath, keys):
     driver.find_element(By.XPATH, xpath).send_keys(keys)
 
 def click(xpath):
-    driver.find_element_by_xpath(xpath).click()
+    driver.find_element(By.XPATH, xpath).click()
 
 def wait_until_clickable(time, xpath):
     WebDriverWait(driver, time).until(EC.element_to_be_clickable((By.XPATH, xpath)))
@@ -42,8 +42,7 @@ def is_logged_out():
 def is_there_order():
     wait_until_clickable(20, "//button[@class='btn btn-st05 js-search-button']")
 
-    num_of_order = int(driver.find_element_by_xpath("//span[@id='js-voucher-before-used-count']").text)
-    print(num_of_order)
+    num_of_order = int(driver.find_element(By.XPATH, "//span[@id='js-voucher-before-used-count']").text)
 
     if num_of_order == 0:
         return False
@@ -63,25 +62,25 @@ def parse_order_data():
     except Exception as e:
         return result
 
-    cnt = len(driver.find_elements_by_xpath("//table[@class='cancle-table sub-table']"))
+    cnt = len(driver.find_elements(By.XPATH, "//table[@class='cancle-table sub-table']"))
 
     for i in range(cnt):
         temp_dict = dict()
-        pcode_text = driver.find_elements_by_class_name('cancle-table')[-1].text.split(': ')
+        pcode_text = driver.find_elements(By.CLASS_NAME, 'cancle-table')[-1].text.split(': ')
         temp_dict['pcode'] = pcode_text[-1]
-        temp_dict['pname'] = driver.find_elements_by_xpath("//span[@class='tit-detail']")[0].text
-        temp_dict['ordernum'] = driver.find_elements_by_xpath("//td[@class='tit-sub']")[5].text
+        temp_dict['pname'] = driver.find_elements(By.XPATH, "//span[@class='tit-detail']")[0].text
+        temp_dict['ordernum'] = driver.find_elements(By.XPATH, "//td[@class='tit-sub']")[5].text
         temp_dict['orderdate'] = ''
-        temp_dict['ordername'] = driver.find_elements_by_xpath("//td[@class='tit-sub']")[0].text
-        temp_dict['orderhtel'] = driver.find_elements_by_xpath("//td[@class='tit-sub']")[2].text
-        temp_dict['orderemail'] = driver.find_elements_by_xpath("//td[@class='tit-sub']")[3].text
-        temp_dict['ticketnum'] = driver.find_elements_by_class_name('sub-table')[i].find_element_by_class_name('ticket-title').find_element_by_class_name('padding-42').text
-        temp_dict['optionname'] = driver.find_elements_by_xpath("//td[@class='subtitle']")[1].text
-        start_date, end_date = driver.find_elements_by_xpath("//table[@class='cancle-table']")[1].find_elements_by_class_name('tit-sub')[5].text.split('~')
+        temp_dict['ordername'] = driver.find_elements(By.XPATH, "//td[@class='tit-sub']")[0].text
+        temp_dict['orderhtel'] = driver.find_elements(By.XPATH, "//td[@class='tit-sub']")[2].text
+        temp_dict['orderemail'] = driver.find_elements(By.XPATH, "//td[@class='tit-sub']")[3].text
+        temp_dict['ticketnum'] = driver.find_elements(By.CLASS_NAME, 'sub-table')[i].find_element(By.CLASS_NAME, 'ticket-title').find_element(By.CLASS_NAME, 'padding-42').text
+        temp_dict['optionname'] = driver.find_elements(By.XPATH, "//td[@class='subtitle']")[1].text
+        start_date, end_date = driver.find_elements(By.XPATH, "//table[@class='cancle-table']")[1].find_elements(By.CLASS_NAME, 'tit-sub')[5].text.split('~')
         temp_dict['use_sdate'] = start_date.strip(' ')
         temp_dict['use_edate'] = end_date.strip(' ')
-        temp_dict['price_sale'] = int(driver.find_elements_by_xpath("//table[@class='cancle-table sub-table']")[i].find_elements_by_class_name('ticket-sub-tr')[1].find_element_by_class_name('padding-42').text[:-1].replace(',', ''))
-        temp_dict['price_input'] = int(driver.find_elements_by_xpath("//table[@class='cancle-table sub-table']")[i].find_elements_by_class_name('ticket-sub-tr')[1].find_elements_by_class_name('tit-sub')[1].text[:-1].replace(',', ''))
+        temp_dict['price_sale'] = int(driver.find_elements(By.XPATH, "//table[@class='cancle-table sub-table']")[i].find_elements(By.CLASS_NAME, 'ticket-sub-tr')[1].find_element(By.CLASS_NAME, 'padding-42').text[:-1].replace(',', ''))
+        temp_dict['price_input'] = int(driver.find_elements(By.XPATH, "//table[@class='cancle-table sub-table']")[i].find_elements(By.CLASS_NAME, 'ticket-sub-tr')[1].find_elements(By.CLASS_NAME, 'tit-sub')[1].text[:-1].replace(',', ''))
 
         result.append(temp_dict)
 
@@ -89,13 +88,16 @@ def parse_order_data():
     driver.switch_to.window(driver.window_handles[0])
 
     for each in result:
-        each['orderdate'] = driver.find_elements_by_class_name('reservation-bold-font')[10].text
+        each['orderdate'] = driver.find_elements(By.CLASS_NAME, 'reservation-bold-font')[10].text
 
     print(result)
     return result
 
 def log_in():
     print('Logging in...')
+
+    wait_until_clickable(20, "//input[@id='username']")
+    time.sleep(1)
 
     with open("config.json", "r", encoding='utf-8') as st_json:
         json_data = json.load(st_json)
@@ -125,17 +127,17 @@ def log_in():
 
             send_key("//input[@id='auth-mfa-code']", auth_code['auth'] + Keys.ENTER)
 
-            wait_until_clickable(5, "//img[@alt='쿠팡로고']")
+            wait_until_clickable(20, "//img[@alt='쿠팡로고']")
 
             break
         except Exception as e:
             print(e)
             try:
-                wait_until_clickable(5, "//input[@id='auth-mfa-code']")
+                wait_until_clickable(20, "//input[@id='auth-mfa-code']")
             except Exception as e:
                 driver.get(url=URL)
                 log_in()
-                break
+                return
 
     driver.get(url=URL)
 
@@ -157,9 +159,6 @@ if __name__ == "__main__":
     driver = webdriver.Chrome(executable_path='chromedriver')
     driver.get(url=URL)
 
-    wait_until_clickable(20, "//input[@id='username']")
-    time.sleep(1)
-
     while True:
         if is_logged_out():
             log_in()
@@ -173,7 +172,7 @@ if __name__ == "__main__":
                 parse_data['item'].append(each)
 
             if len(parse_data['item']) != 0:
-                driver.find_elements_by_name('selectVoucherOrder')[1].click()
+                driver.find_elements(By.NAME, 'selectVoucherOrder')[1].click()
                 click("//button[@class='btn btn-st01  green js-use-ticket-list']")
                 wait_until_clickable(20, "//button[@class='btn btn btn-st01 green']")
                 click("//button[@class='btn btn btn-st01 green']")
@@ -199,5 +198,5 @@ if __name__ == "__main__":
                 driver.switch_to.window(driver.window_handles[0])
 
         else:
-            time.sleep(3)
+            time.sleep(1)
 
