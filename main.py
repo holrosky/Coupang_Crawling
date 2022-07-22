@@ -28,20 +28,25 @@ def is_logged_out():
 
     while True:
         try:
-            wait_until_clickable(1, "//input[@id='username']")
-            return True
-        except:
-            pass
-
-        try:
-            wait_until_clickable(1, "//span[@id='js-voucher-before-used-count']")
+            wait_until_clickable(5, "//span[@id='js-voucher-before-used-count']")
             return False
         except:
             pass
 
+        try:
+            wait_until_clickable(5, "//input[@id='username']")
+            return True
+        except:
+            pass
+
+        driver.get(url=URL)
+        time.sleep(5)
+
+
+
 def is_there_order():
     wait_until_clickable(20, "//button[@class='btn btn-st05 js-search-button']")
-
+    time.sleep(1)
     num_of_order = int(driver.find_element(By.XPATH, "//span[@id='js-voucher-before-used-count']").text)
 
     if num_of_order == 0:
@@ -159,44 +164,52 @@ if __name__ == "__main__":
     driver = webdriver.Chrome(executable_path='chromedriver')
     driver.get(url=URL)
 
-    while True:
-        if is_logged_out():
-            log_in()
-
-        if is_there_order():
-            click("//button[@class='btn-s-ty02 display-b m0-auto js-detail']")
-
-            parse_data = {'secretkey': secrete_key, 'item': list()}
-
-            for each in parse_order_data():
-                parse_data['item'].append(each)
-
-            if len(parse_data['item']) != 0:
-                driver.find_elements(By.NAME, 'selectVoucherOrder')[1].click()
-                click("//button[@class='btn btn-st01  green js-use-ticket-list']")
-                wait_until_clickable(20, "//button[@class='btn btn btn-st01 green']")
-                click("//button[@class='btn btn btn-st01 green']")
-
-                digest = hmac.new(encrypt_key.encode('utf-8'), str(parse_data).encode('utf-8'), hashlib.sha256).digest()
-                digest_b64 = base64.b64encode(digest)  # bytes again
-                Hmac = auth_key + ':' + digest_b64.decode('utf-8')
-
-                header = {
-                    'Accept': 'application/json',
-                    'Content-Type': 'application/json',
-                    'Authorization': auth_key,
-                    'Hmac': Hmac
-                }
-
-                post_result = requests.post(url=post_api_url, headers=header, data=json.dumps(parse_data))
-
-                print(Hmac)
-                print(post_result.json())
-
-            else:
-                driver.close()
-                driver.switch_to.window(driver.window_handles[0])
-
-        else:
-            time.sleep(1)
+    if is_logged_out():
+        log_in()
+    # while True:
+    #     try:
+    #         if is_logged_out():
+    #             log_in()
+    #
+    #         if is_there_order():
+    #             click("//button[@class='btn-s-ty02 display-b m0-auto js-detail']")
+    #
+    #             parse_data = {'secretkey': secrete_key, 'item': list()}
+    #
+    #             for each in parse_order_data():
+    #                 parse_data['item'].append(each)
+    #
+    #             if len(parse_data['item']) != 0:
+    #                 digest = hmac.new(encrypt_key.encode('utf-8'), str(parse_data).encode('utf-8'), hashlib.sha256).digest()
+    #                 digest_b64 = base64.b64encode(digest)  # bytes again
+    #                 Hmac = auth_key + ':' + digest_b64.decode('utf-8')
+    #
+    #                 header = {
+    #                     'Accept': 'application/json',
+    #                     'Content-Type': 'application/json',
+    #                     'Authorization': auth_key,
+    #                     'Hmac': Hmac
+    #                 }
+    #
+    #                 post_result = requests.post(url=post_api_url, headers=header, data=json.dumps(parse_data))
+    #                 reply = post_result.json()
+    #
+    #                 print(post_result.json())
+    #
+    #                 if reply['msg'] == '성공':
+    #                     driver.find_elements(By.NAME, 'selectVoucherOrder')[1].click()
+    #                     click("//button[@class='btn-s-ty02 js-use-ticket-list']")
+    #
+    #                     wait_until_clickable(20, "//button[@class='btn btn btn-st01 green']")
+    #
+    #                     send_key("//button[@class='btn btn btn-st01 green']", Keys.ENTER)
+    #
+    #                     #click("//button[@class='btn btn btn-st01 green']")
+    #                     time.sleep(2)
+    #             else:
+    #                 driver.close()
+    #                 driver.switch_to.window(driver.window_handles[0])
+    #     except Exception as e:
+    #         print(e)
+    #         driver.get(url=URL)
 
